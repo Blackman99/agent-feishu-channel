@@ -208,6 +208,31 @@ describe("parseInput — Phase 6 commands", () => {
     });
   });
 
+  it("/effort high → command effort", () => {
+    expect(parseInput("/effort high")).toEqual({
+      kind: "command",
+      cmd: { name: "effort", effort: "high" },
+    });
+  });
+
+  it("/effort minimal → command effort for Codex", () => {
+    expect(parseInput("/effort minimal")).toEqual({
+      kind: "command",
+      cmd: { name: "effort", effort: "minimal" },
+    });
+  });
+
+  it("/effort without valid argument → unknown_command", () => {
+    expect(parseInput("/effort")).toEqual({
+      kind: "unknown_command",
+      raw: "/effort",
+    });
+    expect(parseInput("/effort extreme")).toEqual({
+      kind: "unknown_command",
+      raw: "/effort extreme",
+    });
+  });
+
   it("/provider codex → command provider", () => {
     expect(parseInput("/provider codex")).toEqual({
       kind: "command",

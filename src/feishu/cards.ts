@@ -474,6 +474,7 @@ type SessionCardRecord = {
   createdAt: string;
   lastActiveAt: string;
   model?: string;
+  effort?: string;
   provider?: "claude" | "codex";
   providerSessionId?: string;
   claudeSessionId?: string;
@@ -541,6 +542,7 @@ export function buildSessionsCard(
       `**${projectLabel}** ${status}`,
       strings.sessionsCwd(entry.record.cwd),
       strings.sessionsModel(entry.record.model ?? "-"),
+      strings.sessionsEffort(entry.record.effort ?? "-"),
       strings.sessionsLastActive(timeAgo),
     ];
 

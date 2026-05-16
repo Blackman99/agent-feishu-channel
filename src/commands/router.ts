@@ -1,3 +1,5 @@
+import type { ReasoningEffort } from "../types.js";
+
 export type PermissionMode =
   | "default"
   | "acceptEdits"
@@ -16,6 +18,7 @@ export type ParsedCommand =
   | { name: "project"; alias: string }
   | { name: "mode"; mode: PermissionMode }
   | { name: "model"; model: string }
+  | { name: "effort"; effort: ReasoningEffort }
   | { name: "status" }
   | { name: "help" }
   | { name: "config_show" }
@@ -54,6 +57,15 @@ const VALID_MODES = new Set<string>([
   "bypassPermissions",
 ]);
 
+const VALID_EFFORTS = new Set<string>([
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+]);
+
 /** Command words that the parser recognizes after a leading `/`. */
 const KNOWN_COMMANDS = new Set([
   "new",
@@ -66,6 +78,7 @@ const KNOWN_COMMANDS = new Set([
   "provider",
   "mode",
   "model",
+  "effort",
   "status",
   "help",
   "config",
@@ -180,6 +193,11 @@ function parseCommand(
       return null;
     case "model":
       return rest ? { name: "model", model: rest } : null;
+    case "effort":
+      if (VALID_EFFORTS.has(rest)) {
+        return { name: "effort", effort: rest as ReasoningEffort };
+      }
+      return null;
     case "status":
       return { name: "status" };
     case "help":

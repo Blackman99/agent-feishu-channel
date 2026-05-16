@@ -17,6 +17,7 @@ const BASE_CLAUDE_CONFIG = {
   defaultCwd: "/tmp/cfc-test",
   defaultPermissionMode: "default" as const,
   defaultModel: "claude-opus-4-6",
+  defaultEffort: "high" as const,
   cliPath: "claude",
   permissionTimeoutMs: 300_000,
   permissionWarnBeforeMs: 60_000,
@@ -1170,12 +1171,62 @@ describe("Session runtime overrides + stats", () => {
     await outcome.done;
   });
 
+  it("setEffortOverride causes processLoop to use the override", async () => {
+    const h = makeHarness();
+    h.session.setEffortOverride("xhigh");
+    const spy = new SpyRenderer();
+    const outcome = await h.session.submit(
+      {
+        kind: "run",
+        text: "hi",
+        senderOpenId: "ou_alice",
+        parentMessageId: "om_root_1",
+        locale: "zh",
+      },
+      spy.emit,
+    );
+    if (outcome.kind !== "started") throw new Error("unreachable");
+    await flushMicrotasks();
+    expect(h.fakes[0]!.options.effort).toBe("xhigh");
+    h.fakes[0]!.finishWithSuccess({ durationMs: 1, inputTokens: 10, outputTokens: 20 });
+    await outcome.done;
+  });
+
+  it("setModelOverride keeps Claude resume id but clears Codex resume id when the model changes", () => {
+    const claude = makeHarness();
+    claude.session.setProviderSessionId("ses_claude");
+    claude.session.setModelOverride("claude-sonnet-4-6");
+    expect(claude.session.getStatus().providerSessionId).toBe("ses_claude");
+
+    const codex = makeHarness();
+    codex.session.setProvider("codex");
+    codex.session.setProviderSessionId("thread_codex");
+    codex.session.setModelOverride("gpt-5.5");
+    expect(codex.session.getStatus().providerSessionId).toBeUndefined();
+  });
+
+  it("setEffortOverride keeps Claude resume id but clears Codex resume id when effort changes", () => {
+    const claude = makeHarness();
+    claude.session.setProviderSessionId("ses_claude");
+    claude.session.setEffortOverride("max");
+    expect(claude.session.getStatus().providerSessionId).toBe("ses_claude");
+
+    const codex = makeHarness();
+    codex.session.setProvider("codex");
+    codex.session.setProviderSessionId("thread_codex");
+    codex.session.setEffortOverride("minimal");
+    expect(codex.session.getStatus().providerSessionId).toBeUndefined();
+  });
+
   it("getStatus() returns correct initial values", () => {
     const h = makeHarness();
     const status = h.session.getStatus();
     expect(status.provider).toBe("claude");
     expect(status.providerSessionId).toBeUndefined();
     expect(status.state).toBe("idle");
+    expect(status.permissionMode).toBe("default");
+    expect(status.model).toBe("claude-opus-4-6");
+    expect(status.effort).toBe("high");
     expect(status.turnCount).toBe(0);
     expect(status.totalInputTokens).toBe(0);
     expect(status.totalOutputTokens).toBe(0);

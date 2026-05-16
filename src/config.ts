@@ -31,16 +31,26 @@ const PermissionModeSchema = z.enum([
   "bypassPermissions",
 ]);
 
+const ClaudeEffortSchema = z.enum(["low", "medium", "high", "xhigh", "max"]);
+const CodexEffortSchema = z.enum([
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+]);
+
 const AgentSchema = z.object({
   default_provider: z.enum(["claude", "codex"]).default("claude"),
-  default_cwd: z.string().min(1),
-  default_permission_mode: PermissionModeSchema.default("default"),
-  permission_timeout_seconds: z.number().int().positive().default(300),
-  permission_warn_before_seconds: z.number().int().positive().default(60),
+  default_cwd: z.string().min(1).optional(),
+  default_permission_mode: PermissionModeSchema.optional(),
+  permission_timeout_seconds: z.number().int().positive().optional(),
+  permission_warn_before_seconds: z.number().int().positive().optional(),
 });
 
 const ClaudeSchema = z.object({
   default_model: z.string().min(1).default("claude-opus-4-6"),
+  default_effort: ClaudeEffortSchema.default("high"),
   cli_path: z.string().min(1).default("claude"),
   default_cwd: z.string().min(1).optional(),
   default_permission_mode: PermissionModeSchema.default("default"),
@@ -49,7 +59,9 @@ const ClaudeSchema = z.object({
 });
 
 const CodexSchema = z.object({
-  default_model: z.string().min(1).default("gpt-5.4"),
+  default_model: z.string().min(1).default("gpt-5.5"),
+  default_effort: CodexEffortSchema.default("high"),
+  default_permission_mode: PermissionModeSchema.default("default"),
   cli_path: z.string().min(1).default("codex"),
 });
 
@@ -116,7 +128,9 @@ const ConfigSchema = z.object({
   agent: AgentSchema.optional(),
   claude: ClaudeSchema,
   codex: CodexSchema.default({
-    default_model: "gpt-5.4",
+    default_model: "gpt-5.5",
+    default_effort: "high",
+    default_permission_mode: "default",
     cli_path: "codex",
   }),
   render: RenderSchema,
@@ -149,6 +163,10 @@ function hasOwnProperty(
   );
 }
 
+function sectionHasField(raw: unknown, section: string, field: string): boolean {
+  return hasOwnProperty(raw, section) && hasOwnProperty(raw[section], field);
+}
+
 function validateMixedAgentConfig(
   path: string,
   raw: unknown,
@@ -156,38 +174,18 @@ function validateMixedAgentConfig(
 ): void {
   if (!hasOwnProperty(raw, "claude")) return;
   const claude = raw.claude;
-  if (!hasOwnProperty(claude, "default_cwd") &&
-      !hasOwnProperty(claude, "default_permission_mode") &&
-      !hasOwnProperty(claude, "permission_timeout_seconds") &&
-      !hasOwnProperty(claude, "permission_warn_before_seconds")) {
+  if (!hasOwnProperty(claude, "default_cwd")) {
     return;
   }
 
   const conflicts: string[] = [];
   if (
     hasOwnProperty(claude, "default_cwd") &&
+    agent.default_cwd !== undefined &&
     typeof claude.default_cwd === "string" &&
     expandHome(claude.default_cwd) !== expandHome(agent.default_cwd)
   ) {
     conflicts.push("claude.default_cwd");
-  }
-  if (
-    hasOwnProperty(claude, "default_permission_mode") &&
-    claude.default_permission_mode !== agent.default_permission_mode
-  ) {
-    conflicts.push("claude.default_permission_mode");
-  }
-  if (
-    hasOwnProperty(claude, "permission_timeout_seconds") &&
-    claude.permission_timeout_seconds !== agent.permission_timeout_seconds
-  ) {
-    conflicts.push("claude.permission_timeout_seconds");
-  }
-  if (
-    hasOwnProperty(claude, "permission_warn_before_seconds") &&
-    claude.permission_warn_before_seconds !== agent.permission_warn_before_seconds
-  ) {
-    conflicts.push("claude.permission_warn_before_seconds");
   }
 
   if (conflicts.length > 0) {
@@ -265,11 +263,51 @@ export async function loadConfig(path: string): Promise<AppConfig> {
   }
   const agent = data.agent ?? {
     default_provider: "claude" as const,
-    default_cwd: data.claude.default_cwd,
-    default_permission_mode: data.claude.default_permission_mode,
-    permission_timeout_seconds: data.claude.permission_timeout_seconds,
-    permission_warn_before_seconds: data.claude.permission_warn_before_seconds,
   };
+  const agentDefaultCwd = agent.default_cwd ?? data.claude.default_cwd;
+  const agentDefaultPermissionMode =
+    agent.default_permission_mode ?? data.claude.default_permission_mode;
+  const agentPermissionTimeoutSeconds =
+    agent.permission_timeout_seconds ?? data.claude.permission_timeout_seconds;
+  const agentPermissionWarnBeforeSeconds =
+    agent.permission_warn_before_seconds
+    ?? data.claude.permission_warn_before_seconds;
+  const requireDefaultCwd = (): string => {
+    if (!agentDefaultCwd) {
+      throw new ConfigError(
+        `Invalid config at ${path}:\n  - agent.default_cwd: required when claude.default_cwd is omitted`,
+      );
+    }
+    return expandHome(agentDefaultCwd);
+  };
+  const claudeDefaultPermissionMode = sectionHasField(
+    parsed,
+    "claude",
+    "default_permission_mode",
+  )
+    ? data.claude.default_permission_mode
+    : agentDefaultPermissionMode;
+  const codexDefaultPermissionMode = sectionHasField(
+    parsed,
+    "codex",
+    "default_permission_mode",
+  )
+    ? data.codex.default_permission_mode
+    : agentDefaultPermissionMode;
+  const claudePermissionTimeoutSeconds = sectionHasField(
+    parsed,
+    "claude",
+    "permission_timeout_seconds",
+  )
+    ? data.claude.permission_timeout_seconds
+    : agentPermissionTimeoutSeconds;
+  const claudePermissionWarnBeforeSeconds = sectionHasField(
+    parsed,
+    "claude",
+    "permission_warn_before_seconds",
+  )
+    ? data.claude.permission_warn_before_seconds
+    : agentPermissionWarnBeforeSeconds;
   return {
     feishu: {
       appId: data.feishu.app_id,
@@ -283,35 +321,24 @@ export async function loadConfig(path: string): Promise<AppConfig> {
     },
     agent: {
       defaultProvider: agent.default_provider,
-      defaultCwd: (() => {
-        if (!agent.default_cwd) {
-          throw new ConfigError(
-            `Invalid config at ${path}:\n  - claude.default_cwd: required when [agent] is omitted`,
-          );
-        }
-        return expandHome(agent.default_cwd);
-      })(),
-      defaultPermissionMode: agent.default_permission_mode,
-      permissionTimeoutMs: agent.permission_timeout_seconds * 1000,
-      permissionWarnBeforeMs: agent.permission_warn_before_seconds * 1000,
+      defaultCwd: requireDefaultCwd(),
+      defaultPermissionMode: agentDefaultPermissionMode,
+      permissionTimeoutMs: agentPermissionTimeoutSeconds * 1000,
+      permissionWarnBeforeMs: agentPermissionWarnBeforeSeconds * 1000,
     },
     claude: {
-      defaultCwd: (() => {
-        if (!agent.default_cwd) {
-          throw new ConfigError(
-            `Invalid config at ${path}:\n  - claude.default_cwd: required when [agent] is omitted`,
-          );
-        }
-        return expandHome(agent.default_cwd);
-      })(),
-      defaultPermissionMode: agent.default_permission_mode,
+      defaultCwd: requireDefaultCwd(),
+      defaultPermissionMode: claudeDefaultPermissionMode,
       defaultModel: data.claude.default_model,
+      defaultEffort: data.claude.default_effort,
       cliPath: data.claude.cli_path,
-      permissionTimeoutMs: agent.permission_timeout_seconds * 1000,
-      permissionWarnBeforeMs: agent.permission_warn_before_seconds * 1000,
+      permissionTimeoutMs: claudePermissionTimeoutSeconds * 1000,
+      permissionWarnBeforeMs: claudePermissionWarnBeforeSeconds * 1000,
     },
     codex: {
       defaultModel: data.codex.default_model,
+      defaultEffort: data.codex.default_effort,
+      defaultPermissionMode: codexDefaultPermissionMode,
       cliPath: data.codex.cli_path,
     },
     render: {

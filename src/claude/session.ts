@@ -3,7 +3,13 @@ import { Mutex } from "../util/mutex.js";
 import { createDeferred, type Deferred } from "../util/deferred.js";
 import type { Clock } from "../util/clock.js";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { AgentProvider, AppConfig, McpServerConfig } from "../types.js";
+import type {
+  AgentProvider,
+  AppConfig,
+  McpServerConfig,
+  PermissionMode,
+  ReasoningEffort,
+} from "../types.js";
 import type { RenderEvent } from "./render-event.js";
 import type { CanUseToolFn, QueryFn, QueryHandle } from "./query-handle.js";
 import type { PermissionBroker } from "./permission-broker.js";
@@ -102,8 +108,9 @@ interface RuntimeHandoffOptions {
 export interface SessionStatus {
   provider: AgentProvider;
   state: SessionState;
-  permissionMode: string;
+  permissionMode: PermissionMode;
   model: string;
+  effort: ReasoningEffort;
   cwd: string;
   turnCount: number;
   totalInputTokens: number;
@@ -116,7 +123,7 @@ export interface SessionStatus {
 
 export interface ClaudeSessionOptions {
   chatId: string;
-  config: AppConfig["claude"];
+  config: SessionRuntimeConfig;
   mcpServers?: readonly McpServerConfig[];
   queryFn: QueryFn;
   clock: Clock;
@@ -126,6 +133,15 @@ export interface ClaudeSessionOptions {
   onSessionIdCaptured?: () => void;
   onTurnComplete?: () => void;
 }
+
+type SessionRuntimeConfig = Omit<
+  AppConfig["claude"],
+  "defaultModel" | "defaultEffort" | "defaultPermissionMode"
+> & {
+  defaultModel: string;
+  defaultEffort: ReasoningEffort;
+  defaultPermissionMode: PermissionMode;
+};
 
 /**
  * Result of `session.submit(input, emit)`. The caller (dispatcher)
@@ -199,7 +215,7 @@ export class ClaudeSession {
   private static readonly RECENT_CONTEXT_MAX_TURNS = 4;
   private static readonly RECENT_CONTEXT_MAX_CHARS = 1_200;
   private readonly chatId: string;
-  private readonly config: AppConfig["claude"];
+  private readonly config: SessionRuntimeConfig;
   private readonly queryFn: QueryFn;
   // `clock` is a dependency Phase 5 will use (timers). Phase 4 only
   // keeps it in the constructor signature so Phase 5 is a drop-in
@@ -234,8 +250,9 @@ export class ClaudeSession {
    */
   private sessionAcceptEditsSticky = false;
 
-  private permissionModeOverride?: "default" | "acceptEdits" | "plan" | "bypassPermissions";
+  private permissionModeOverride?: PermissionMode;
   private modelOverride?: string;
+  private effortOverride?: ReasoningEffort;
   private provider: AgentProvider = "claude";
   private turnCount = 0;
   private totalInputTokens = 0;
@@ -523,9 +540,7 @@ export class ClaudeSession {
       });
       if (next === null) return;
 
-      const permissionMode = this.sessionAcceptEditsSticky
-        ? ("acceptEdits" as const)
-        : (this.permissionModeOverride ?? this.config.defaultPermissionMode);
+      const permissionMode = this.currentPermissionMode();
       // Per-turn MCP server binds the ask_user tool handler to the
       // current input's senderOpenId / parentMessageId so the
       // question card threads under the triggering message and only
@@ -555,7 +570,8 @@ export class ClaudeSession {
         prompt,
         options: {
           cwd: this.config.defaultCwd,
-          model: this.modelOverride ?? this.config.defaultModel,
+          model: this.currentModel(),
+          effort: this.currentEffort(),
           permissionMode,
           settingSources: ["user", "project"],
           mcpServers,
@@ -597,7 +613,8 @@ export class ClaudeSession {
             prompt: retryPrompt,
             options: {
               cwd: this.config.defaultCwd,
-              model: this.modelOverride ?? this.config.defaultModel,
+              model: this.currentModel(),
+              effort: this.currentEffort(),
               permissionMode,
               settingSources: ["user", "project"],
               mcpServers,
@@ -659,7 +676,7 @@ export class ClaudeSession {
   private assessContextRisk(prompt: string): ContextAssessment {
     const tokenUsage = this.totalInputTokens + this.totalOutputTokens;
     const tokenWindow = this.contextWindowFor(
-      this.modelOverride ?? this.config.defaultModel,
+      this.currentModel(),
     );
     const estimatedBytes = this.estimatePromptBytes(prompt);
 
@@ -787,6 +804,7 @@ export class ClaudeSession {
       this.buildRetainedContinuationSummaryWithHeading(options.heading),
       `Provider: ${status.provider}`,
       `Model: ${status.model}`,
+      `Effort: ${status.effort}`,
       `Working directory: ${status.cwd}`,
       `Permission mode: ${status.permissionMode}`,
       `Prior token totals: in=${status.totalInputTokens}, out=${status.totalOutputTokens}`,
@@ -946,15 +964,39 @@ export class ClaudeSession {
     return this.state;
   }
 
-  setPermissionModeOverride(
-    mode: "default" | "acceptEdits" | "plan" | "bypassPermissions",
-  ): void {
+  private currentPermissionMode(): PermissionMode {
+    return this.sessionAcceptEditsSticky
+      ? "acceptEdits"
+      : (this.permissionModeOverride ?? this.config.defaultPermissionMode);
+  }
+
+  private currentModel(): string {
+    return this.modelOverride ?? this.config.defaultModel;
+  }
+
+  private currentEffort(): ReasoningEffort {
+    return this.effortOverride ?? this.config.defaultEffort;
+  }
+
+  setPermissionModeOverride(mode: PermissionMode): void {
     this.permissionModeOverride = mode;
     this.sessionAcceptEditsSticky = mode === "acceptEdits";
   }
 
   setModelOverride(model: string): void {
+    const currentModel = this.currentModel();
     this.modelOverride = model;
+    if (this.provider === "codex" && model !== currentModel) {
+      this.claudeSessionId = undefined;
+    }
+  }
+
+  setEffortOverride(effort: ReasoningEffort): void {
+    const currentEffort = this.currentEffort();
+    this.effortOverride = effort;
+    if (this.provider === "codex" && effort !== currentEffort) {
+      this.claudeSessionId = undefined;
+    }
   }
 
   setProvider(provider: AgentProvider): void {
@@ -963,7 +1005,9 @@ export class ClaudeSession {
 
   /** Returns true if the session has any explicit configuration overrides worth persisting. */
   hasExplicitOverrides(): boolean {
-    return this.modelOverride !== undefined || this.permissionModeOverride !== undefined;
+    return this.modelOverride !== undefined ||
+      this.effortOverride !== undefined ||
+      this.permissionModeOverride !== undefined;
   }
 
   /** Set the provider session ID for resume. Used by SessionManager during lazy restore. */
@@ -981,10 +1025,9 @@ export class ClaudeSession {
     return {
       provider: this.provider,
       state: this.state,
-      permissionMode: this.sessionAcceptEditsSticky
-        ? "acceptEdits"
-        : (this.permissionModeOverride ?? this.config.defaultPermissionMode),
-      model: this.modelOverride ?? this.config.defaultModel,
+      permissionMode: this.currentPermissionMode(),
+      model: this.currentModel(),
+      effort: this.currentEffort(),
       cwd: this.config.defaultCwd,
       turnCount: this.turnCount,
       totalInputTokens: this.totalInputTokens,

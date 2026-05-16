@@ -31,6 +31,7 @@ describe("QueryHandle shape", () => {
       options: {
         cwd: "/tmp",
         model: "claude-opus-4-6",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },

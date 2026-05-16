@@ -3,7 +3,12 @@ import { ClaudeSession, type QueryFn, type SessionStatus } from "./session.js";
 import type { Clock, TimeoutHandle } from "../util/clock.js";
 import type { PermissionBroker } from "./permission-broker.js";
 import type { QuestionBroker } from "./question-broker.js";
-import type { AgentProvider, AppConfig } from "../types.js";
+import type {
+  AgentProvider,
+  AppConfig,
+  PermissionMode,
+  ReasoningEffort,
+} from "../types.js";
 import type {
   StateStore,
   SessionRecord,
@@ -206,20 +211,18 @@ export class ClaudeSessionManager {
       this.opts.providerQueryFns?.[effectiveProvider] ?? this.opts.queryFn;
 
     let cwd: string;
-    let permissionMode:
-      | AppConfig["claude"]["defaultPermissionMode"]
-      | undefined;
+    let permissionMode: PermissionMode | undefined;
     let model: string | undefined;
+    let effort: ReasoningEffort | undefined;
     let providerSessionId: string | undefined;
 
     if (stale) {
       cwd = cwdOverride
         ?? this.repairProjectCwd(projectCwd, stale.cwd)
         ?? stale.cwd;
-      permissionMode = stale.permissionMode as
-        | AppConfig["claude"]["defaultPermissionMode"]
-        | undefined;
+      permissionMode = stale.permissionMode as PermissionMode | undefined;
       model = stale.model;
+      effort = stale.effort as ReasoningEffort | undefined;
       providerSessionId = stale.providerSessionId;
       this.staleRecords.delete(key);
     } else {
@@ -232,6 +235,10 @@ export class ClaudeSessionManager {
         ...this.opts.config,
         defaultCwd: cwd,
         defaultModel: this.getDefaultModelForProvider(effectiveProvider),
+        defaultEffort: this.getDefaultEffortForProvider(effectiveProvider),
+        defaultPermissionMode: this.getDefaultPermissionModeForProvider(
+          effectiveProvider,
+        ),
       },
       mcpServers: this.opts.mcpServers ?? [],
       queryFn,
@@ -252,6 +259,9 @@ export class ClaudeSessionManager {
       session.setModelOverride(model);
     } else if (effectiveProvider === "codex") {
       session.setModelOverride(this.getDefaultModelForProvider("codex"));
+    }
+    if (effort) {
+      session.setEffortOverride(effort);
     }
     if (providerSessionId) {
       session.setProviderSessionId(providerSessionId);
@@ -398,6 +408,7 @@ export class ClaudeSessionManager {
             lastActiveAt: status.lastActiveAt,
             permissionMode: status.permissionMode,
             model: status.model,
+            effort: status.effort,
           },
         active: true,
       };
@@ -495,7 +506,26 @@ export class ClaudeSessionManager {
     if (provider === "claude") {
       return this.opts.providerConfigs?.claude.defaultModel ?? this.opts.config.defaultModel;
     }
-    return this.opts.providerConfigs?.codex.defaultModel ?? "gpt-5.4";
+    return this.opts.providerConfigs?.codex.defaultModel ?? "gpt-5.5";
+  }
+
+  private getDefaultEffortForProvider(provider: AgentProvider): ReasoningEffort {
+    if (provider === "claude") {
+      return this.opts.providerConfigs?.claude.defaultEffort
+        ?? this.opts.config.defaultEffort;
+    }
+    return this.opts.providerConfigs?.codex.defaultEffort ?? "high";
+  }
+
+  private getDefaultPermissionModeForProvider(
+    provider: AgentProvider,
+  ): PermissionMode {
+    if (provider === "claude") {
+      return this.opts.providerConfigs?.claude.defaultPermissionMode
+        ?? this.opts.config.defaultPermissionMode;
+    }
+    return this.opts.providerConfigs?.codex.defaultPermissionMode
+      ?? this.opts.config.defaultPermissionMode;
   }
 
   private requireProviderSessionStatus(
@@ -518,6 +548,7 @@ export class ClaudeSessionManager {
         : {}),
       permissionMode: status.permissionMode,
       model: status.model,
+      effort: status.effort,
     };
   }
 
@@ -525,8 +556,9 @@ export class ClaudeSessionManager {
     return status.providerSessionId !== undefined
       || status.provider !== this.getDefaultProvider()
       || status.cwd !== this.opts.config.defaultCwd
-      || status.permissionMode !== this.opts.config.defaultPermissionMode
-      || status.model !== this.getDefaultModelForProvider(status.provider);
+      || status.permissionMode !== this.getDefaultPermissionModeForProvider(status.provider)
+      || status.model !== this.getDefaultModelForProvider(status.provider)
+      || status.effort !== this.getDefaultEffortForProvider(status.provider);
   }
 
   private inferProviderForProject(

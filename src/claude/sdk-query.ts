@@ -1,4 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import type { Logger } from "pino";
 import type { SDKMessageLike } from "./session.js";
 import type { QueryFn, QueryHandle } from "./query-handle.js";
@@ -38,6 +39,7 @@ export function createSdkQueryFn(opts: SdkQueryFnOptions): QueryFn {
       options: {
         cwd: params.options.cwd,
         model: params.options.model,
+        effort: params.options.effort as EffortLevel,
         permissionMode: params.options.permissionMode,
         settingSources: params.options.settingSources as ("project" | "user" | "local")[],
         canUseTool: params.canUseTool,

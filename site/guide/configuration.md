@@ -11,6 +11,12 @@ mkdir -p ~/.agent-feishu-channel
 cp config.example.toml ~/.agent-feishu-channel/config.toml
 ```
 
+## Upgrading Existing Configs
+
+Older Claude-only configs that keep `default_cwd`, `default_permission_mode`, and permission timing under `[claude]` still load without manual edits. The loader treats those values as the shared fallback when `[agent]` is missing or only partially present, and fills new Codex defaults automatically (`gpt-5.5`, `high` effort, and the shared permission mode).
+
+You only need to edit the file if you want it to match the new layout. New provider-specific keys can be added gradually with `/config set ... --persist`; partial `[agent]` sections remain valid during that transition.
+
 ## Config Sections
 
 ### `[feishu]` — Feishu App Credentials
@@ -39,22 +45,28 @@ The bot has full shell and file access to your machine. Always configure `allowe
 |-----|---------|-------------|
 | `default_provider` | `"claude"` | Default provider for new chats: `claude` or `codex` |
 | `default_cwd` | `"~/my-projects"` | Working directory for new sessions |
-| `default_permission_mode` | `"default"` | Permission mode: `default`, `acceptEdits`, `plan`, `bypassPermissions` |
-| `permission_timeout_seconds` | `300` | Seconds before a permission card auto-denies |
-| `permission_warn_before_seconds` | `60` | Seconds before timeout to post a reminder |
+| `default_permission_mode` | `"default"` | Shared fallback permission mode when a provider-specific value is not set |
+| `permission_timeout_seconds` | `300` | Legacy/shared fallback for Claude permission timeout |
+| `permission_warn_before_seconds` | `60` | Legacy/shared fallback for Claude timeout reminders |
 
 ### `[claude]` — Claude Runtime Defaults
 
 | Key | Default | Description |
 |-----|---------|-------------|
+| `default_permission_mode` | `"default"` | Claude permission mode: `default`, `acceptEdits`, `plan`, `bypassPermissions` |
 | `default_model` | `"claude-opus-4-6"` | Model ID passed to the CLI's `--model` flag |
+| `default_effort` | `"high"` | Claude SDK effort: `low`, `medium`, `high`, `xhigh`, `max` |
+| `permission_timeout_seconds` | `300` | Seconds before a Claude permission card auto-denies |
+| `permission_warn_before_seconds` | `60` | Seconds before timeout to post a reminder |
 | `cli_path` | `"claude"` | Path to the `claude` binary; resolves via `$PATH` by default |
 
 ### `[codex]` — Codex Runtime Defaults
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `default_model` | `"gpt-5.4"` | Model ID passed to the Codex SDK |
+| `default_permission_mode` | `"default"` | Codex permission mode: `default`, `acceptEdits`, `plan`, `bypassPermissions` |
+| `default_model` | `"gpt-5.5"` | Model ID passed to the Codex SDK |
+| `default_effort` | `"high"` | Codex reasoning effort: `minimal`, `low`, `medium`, `high`, `xhigh` |
 | `cli_path` | `"codex"` | Path to the `codex` binary; resolves via `$PATH` by default |
 
 ### `[render]` — Card Rendering Options
@@ -142,7 +154,13 @@ The following keys can be changed at runtime via `/config set` without restartin
 | `agent.permission_timeout_seconds` | Adjust permission timeout |
 | `agent.permission_warn_before_seconds` | Adjust the timeout warning threshold |
 | `claude.default_model` | Switch the default Claude model |
+| `claude.default_effort` | Change the default Claude SDK effort |
+| `claude.default_permission_mode` | Change the default Claude permission mode |
+| `claude.permission_timeout_seconds` | Adjust Claude permission timeout |
+| `claude.permission_warn_before_seconds` | Adjust Claude timeout warning threshold |
 | `codex.default_model` | Switch the default Codex model |
+| `codex.default_effort` | Change the default Codex reasoning effort |
+| `codex.default_permission_mode` | Change the default Codex permission mode |
 
 ### The `--persist` Flag
 
@@ -169,4 +187,6 @@ Environment variables take precedence over config file values where applicable.
 
 - Existing chats persist their chosen provider and resume with the same provider after restart.
 - Switching provider in chat with `/provider <claude|codex>` starts a fresh provider-native thread for that chat.
+- `/model` and `/effort` are session overrides. Codex starts a new provider-native thread when either value changes so the new setting actually takes effect.
+- Claude and Codex accept different effort values: Claude supports `low`, `medium`, `high`, `xhigh`, `max`; Codex supports `minimal`, `low`, `medium`, `high`, `xhigh`.
 - Codex currently treats mid-turn `acceptEdits` escalation as a no-op; all other shared session/config behavior stays aligned where possible.

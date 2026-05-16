@@ -106,7 +106,8 @@ describe("createCodexQueryFn", () => {
       prompt: "hello codex",
       options: {
         cwd: "/tmp/project",
-        model: "gpt-5.4",
+        model: "gpt-5.5",
+        effort: "xhigh",
         permissionMode: "default",
         settingSources: ["project"],
         resumeId: "thread_abc",
@@ -123,7 +124,8 @@ describe("createCodexQueryFn", () => {
     expect(sdk.resumeThread).toHaveBeenCalledWith(
       "thread_abc",
       expect.objectContaining({
-        model: "gpt-5.4",
+        model: "gpt-5.5",
+        modelReasoningEffort: "xhigh",
         workingDirectory: "/tmp/project",
         approvalPolicy: "on-request",
         sandboxMode: "workspace-write",
@@ -178,7 +180,8 @@ describe("createCodexQueryFn", () => {
       prompt: "hello",
       options: {
         cwd: "/tmp/project",
-        model: "gpt-5.4",
+        model: "gpt-5.5",
+        effort: "high",
         permissionMode: "bypassPermissions",
         settingSources: ["project"],
       },
@@ -197,7 +200,7 @@ describe("createCodexQueryFn", () => {
 
     expect(sdk.startThread).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "gpt-5.4",
+        model: "gpt-5.5",
         workingDirectory: "/tmp/project",
         approvalPolicy: "never",
         sandboxMode: "danger-full-access",
@@ -259,7 +262,8 @@ describe("createCodexQueryFn", () => {
       prompt: prompt as Parameters<typeof fn>[0]["prompt"],
       options: {
         cwd: "/tmp/project",
-        model: "gpt-5.4",
+        model: "gpt-5.5",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },
@@ -337,7 +341,8 @@ describe("createCodexQueryFn", () => {
       prompt: prompt as Parameters<typeof fn>[0]["prompt"],
       options: {
         cwd: "/tmp/project",
-        model: "gpt-5.4",
+        model: "gpt-5.5",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },
@@ -405,7 +410,8 @@ describe("createCodexQueryFn", () => {
       prompt: prompt as Parameters<typeof fn>[0]["prompt"],
       options: {
         cwd: "/tmp/project",
-        model: "gpt-5.4",
+        model: "gpt-5.5",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },
@@ -434,7 +440,8 @@ describe("createCodexQueryFn", () => {
       prompt: "hello",
       options: {
         cwd: "/tmp/project",
-        model: "gpt-5.4",
+        model: "gpt-5.5",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },

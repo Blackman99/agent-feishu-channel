@@ -20,6 +20,7 @@ Agent Feishu Channel supports slash commands and special input prefixes to contr
 | `/provider <claude\|codex>` | Switch the current session provider |
 | `/mode <mode>` | Set permission mode |
 | `/model <name>` | Switch the current provider model |
+| `/effort <level>` | Switch the current provider reasoning effort |
 | `/config show` | Display current configuration |
 | `/config set <key> <value>` | Change a config value at runtime |
 | `/config set <key> <value> --persist` | Change and write back to `config.toml` |
@@ -50,7 +51,7 @@ Interrupts the current generation. If the current provider is mid-response, this
 
 ### `/status`
 
-Displays the current session state, active provider, active model, and token usage statistics.
+Displays the current session state, active provider, active model, reasoning effort, and token usage statistics.
 
 ### `/cost`
 
@@ -117,7 +118,15 @@ Sets the permission mode for the current session. Available modes:
 
 ### `/model <name>`
 
-Switches the model for the current provider. For Claude this can be values like `claude-opus-4-6`; for Codex this can be values like `gpt-5.4`.
+Switches the model for the current provider. For Claude this can be values like `claude-opus-4-6`; for Codex this can be values like `gpt-5.5`.
+
+For Codex, changing the model starts a fresh provider-native thread on the next turn so the new model is used instead of resuming the old thread.
+
+### `/effort <level>`
+
+Switches the reasoning effort for the current provider. Claude accepts `low`, `medium`, `high`, `xhigh`, `max`. Codex accepts `minimal`, `low`, `medium`, `high`, `xhigh`.
+
+For Codex, changing effort starts a fresh provider-native thread on the next turn so the new reasoning setting is applied.
 
 ## Configuration
 

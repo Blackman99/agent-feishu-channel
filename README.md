@@ -89,7 +89,7 @@ Options:
 |---------|-------------|
 | `/new` | Start a new session (clear context) |
 | `/stop` | Interrupt current generation |
-| `/status` | Show session state, model, token usage |
+| `/status` | Show session state, model, reasoning effort, token usage |
 | `/cost` | Show token usage totals (input / output / total) for this session |
 | `/context` | Show context window usage and mitigation status |
 | `/compact` | Reset the current session to free context (idle-only) |
@@ -101,6 +101,7 @@ Options:
 | `/provider <claude\|codex>` | Switch the current session provider |
 | `/mode <mode>` | Set permission mode: `default`, `acceptEdits`, `plan`, `bypassPermissions` |
 | `/model <name>` | Switch the current provider model |
+| `/effort <level>` | Switch the current provider reasoning effort |
 | `/config show` | Display current configuration |
 | `/config set <key> <value>` | Change a config value at runtime |
 | `/config set <key> <value> --persist` | Change and write back to config.toml |
@@ -125,9 +126,9 @@ See [`config.example.toml`](config.example.toml) for all options with comments.
 |---------|------|-------------|
 | `[feishu]` | `app_id`, `app_secret`, `encrypt_key`, `verification_token` | Feishu bot credentials |
 | `[access]` | `allowed_open_ids`, `unauthorized_behavior` | Who can talk to the bot |
-| `[agent]` | `default_provider`, `default_cwd`, `default_permission_mode`, `permission_timeout_seconds`, `permission_warn_before_seconds` | Shared agent defaults |
-| `[claude]` | `default_model`, `cli_path` | Claude provider defaults |
-| `[codex]` | `default_model`, `cli_path` | Codex provider defaults |
+| `[agent]` | `default_provider`, `default_cwd`, `default_permission_mode`, `permission_timeout_seconds`, `permission_warn_before_seconds` | Shared defaults and legacy fallbacks |
+| `[claude]` | `default_permission_mode`, `default_model`, `default_effort`, `permission_timeout_seconds`, `permission_warn_before_seconds`, `cli_path` | Claude provider defaults |
+| `[codex]` | `default_permission_mode`, `default_model`, `default_effort`, `cli_path` | Codex provider defaults |
 | `[render]` | `inline_max_bytes`, `hide_thinking`, `show_turn_stats` | Card rendering options |
 | `[persistence]` | `state_file`, `log_dir`, `session_ttl_days` | State and log paths |
 | `[logging]` | `level` | Log level: `trace`, `debug`, `info`, `warn`, `error` |
@@ -142,7 +143,13 @@ These keys can be changed via `/config set` without restart:
 `logging.level`, `agent.default_provider`, `agent.default_cwd`,
 `agent.default_permission_mode`, `agent.permission_timeout_seconds`,
 `agent.permission_warn_before_seconds`, `claude.default_model`,
-`codex.default_model`
+`claude.default_effort`, `claude.default_permission_mode`,
+`claude.permission_timeout_seconds`, `claude.permission_warn_before_seconds`,
+`codex.default_model`, `codex.default_effort`, `codex.default_permission_mode`
+
+### Upgrading old configs
+
+Existing Claude-only configs continue to load. Legacy `[claude]` values are used as shared fallbacks when `[agent]` is absent or only partially present, and Codex receives safe defaults (`gpt-5.5`, `high` effort, shared permission mode). Users can move to the new layout gradually with `/config set ... --persist`; no one-time manual migration is required.
 
 ## Architecture
 

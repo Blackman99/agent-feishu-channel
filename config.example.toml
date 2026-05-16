@@ -38,7 +38,8 @@ default_provider = "claude"
 # changed via /cd or /project.
 default_cwd = "~/my-projects"
 
-# Permission mode for new sessions. Options:
+# Shared fallback permission mode for new sessions. Prefer setting provider-
+# specific values under [claude] and [codex] when they differ. Options:
 #   default            — Phase 5 ACTIVE: tool calls post a permission
 #                        card to the Feishu group; only the user who
 #                        sent the triggering message can click.
@@ -49,18 +50,24 @@ default_cwd = "~/my-projects"
 #                        (Phase 4 legacy; prints a warn on startup)
 default_permission_mode = "default"
 
-# Time in seconds the permission card waits for a click before
-# auto-denying. Card posts a warning reminder (permission_warn_before_seconds)
-# before the hard deadline.
-permission_timeout_seconds = 300
-permission_warn_before_seconds = 60
-
 # ─── Claude provider ─────────────────────────────────────────────────
 [claude]
+# Provider-specific permission mode for Claude sessions.
+default_permission_mode = "default"
+
 # Model id passed to the CLI's --model flag. Any model the local
 # `claude` CLI accepts (e.g. "claude-opus-4-6", "claude-sonnet-4-6",
 # or aliases like "opus" / "sonnet").
 default_model = "claude-opus-4-6"
+
+# Claude SDK effort. Options: low, medium, high, xhigh, max.
+default_effort = "high"
+
+# Claude permission-card timing. Time in seconds the card waits for a
+# click before auto-denying; the warning reminder is posted before the
+# hard deadline.
+permission_timeout_seconds = 300
+permission_warn_before_seconds = 60
 
 # Path to the local Claude Code CLI binary. Leave as "claude" to resolve
 # via $PATH, or set an absolute path if the binary lives outside PATH.
@@ -69,7 +76,15 @@ cli_path = "claude"
 
 # ─── Codex provider ─────────────────────────────────────────────────
 [codex]
-default_model = "gpt-5.4"
+# Provider-specific permission mode for Codex sessions.
+default_permission_mode = "default"
+
+# Model id passed to the Codex SDK.
+default_model = "gpt-5.5"
+
+# Codex reasoning effort. Options: minimal, low, medium, high, xhigh.
+default_effort = "high"
+
 cli_path = "codex"
 
 # ─── Render / Feishu cards ───────────────────────────────────────────
@@ -107,7 +122,9 @@ level = "info"
 #   logging.level, agent.default_provider, agent.default_cwd,
 #   agent.default_permission_mode, agent.permission_timeout_seconds,
 #   agent.permission_warn_before_seconds, claude.default_model,
-#   codex.default_model
+#   claude.default_effort, claude.default_permission_mode,
+#   claude.permission_timeout_seconds, claude.permission_warn_before_seconds,
+#   codex.default_model, codex.default_effort, codex.default_permission_mode
 # Use /config set <key> <value> --persist to write changes back to this file.
 
 # ─── Project aliases ─────────────────────────────────────────────────

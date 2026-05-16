@@ -12,6 +12,7 @@ const CONFIG: Parameters<typeof getProviderDefaults>[0] &
   },
   claude: {
     defaultModel: "claude-opus-4-6",
+    defaultEffort: "high",
     cliPath: "claude",
     defaultCwd: "/tmp/cfc-test",
     defaultPermissionMode: "default",
@@ -19,7 +20,9 @@ const CONFIG: Parameters<typeof getProviderDefaults>[0] &
     permissionWarnBeforeMs: 60_000,
   },
   codex: {
-    defaultModel: "gpt-5.4",
+    defaultModel: "gpt-5.5",
+    defaultEffort: "high",
+    defaultPermissionMode: "plan",
     cliPath: "codex",
   },
 };
@@ -27,7 +30,7 @@ const CONFIG: Parameters<typeof getProviderDefaults>[0] &
 describe("agent provider helpers", () => {
   it("returns the configured default model for each provider", () => {
     expect(defaultModelForProvider("claude", CONFIG)).toBe("claude-opus-4-6");
-    expect(defaultModelForProvider("codex", CONFIG)).toBe("gpt-5.4");
+    expect(defaultModelForProvider("codex", CONFIG)).toBe("gpt-5.5");
   });
 
   it("returns shared provider defaults from the neutral agent config", () => {

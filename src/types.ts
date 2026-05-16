@@ -15,8 +15,27 @@ export type PermissionMode =
   | "plan"
   | "bypassPermissions";
 
-export interface ProviderConfig {
+export type ClaudeEffortLevel = "low" | "medium" | "high" | "xhigh" | "max";
+export type CodexEffortLevel =
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh";
+export type ReasoningEffort = ClaudeEffortLevel | CodexEffortLevel;
+
+export interface ClaudeProviderConfig {
   defaultModel: string;
+  defaultEffort: ClaudeEffortLevel;
+  defaultPermissionMode: PermissionMode;
+  /** Path to the CLI binary. Usually a bare command resolved via $PATH. */
+  cliPath: string;
+}
+
+export interface CodexProviderConfig {
+  defaultModel: string;
+  defaultEffort: CodexEffortLevel;
+  defaultPermissionMode: PermissionMode;
   /** Path to the CLI binary. Usually a bare command resolved via $PATH. */
   cliPath: string;
 }
@@ -43,13 +62,12 @@ export interface LoadedAppConfig {
     unauthorizedBehavior: "ignore" | "reject";
   };
   agent: AgentConfig;
-  claude: ProviderConfig & {
+  claude: ClaudeProviderConfig & {
     defaultCwd: string;
-    defaultPermissionMode: PermissionMode;
     permissionTimeoutMs: number;
     permissionWarnBeforeMs: number;
   };
-  codex: ProviderConfig;
+  codex: CodexProviderConfig;
   render: {
     /** Max bytes (UTF-8) of inline content in a card before truncation. */
     inlineMaxBytes: number;

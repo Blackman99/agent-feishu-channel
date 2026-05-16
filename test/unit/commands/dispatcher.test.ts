@@ -58,12 +58,15 @@ const BASE_CONFIG: AppConfig = {
     defaultCwd: "/tmp/cfc-test",
     defaultPermissionMode: "default",
     defaultModel: "claude-opus-4-6",
+    defaultEffort: "high",
     cliPath: "claude",
     permissionTimeoutMs: 300_000,
     permissionWarnBeforeMs: 60_000,
   },
   codex: {
-    defaultModel: "gpt-5.4",
+    defaultModel: "gpt-5.5",
+    defaultEffort: "high",
+    defaultPermissionMode: "default",
     cliPath: "codex",
   },
   render: {
@@ -232,7 +235,7 @@ describe("CommandDispatcher — simple commands", () => {
 
       const text: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls[0]![1];
       expect(text).toContain("codex");
-      expect(text).toContain("gpt-5.4");
+      expect(text).toContain("gpt-5.5");
     });
 
     it("reports the codex provider and project cwd after switching provider and project", async () => {
@@ -246,7 +249,7 @@ describe("CommandDispatcher — simple commands", () => {
 
       const text: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls[0]![1];
       expect(text).toContain("codex");
-      expect(text).toContain("gpt-5.4");
+      expect(text).toContain("gpt-5.5");
       expect(text).toContain("/home/user/my-app");
     });
 
@@ -260,7 +263,7 @@ describe("CommandDispatcher — simple commands", () => {
         createdAt: new Date().toISOString(),
         lastActiveAt: new Date().toISOString(),
         permissionMode: "default",
-        model: "gpt-5.4",
+        model: "gpt-5.5",
       });
 
       await dispatcher.dispatch(
@@ -273,7 +276,7 @@ describe("CommandDispatcher — simple commands", () => {
 
       const text: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls[0]![1];
       expect(text).toContain("codex");
-      expect(text).toContain("gpt-5.4");
+      expect(text).toContain("gpt-5.5");
     });
   });
 
@@ -434,9 +437,56 @@ describe("CommandDispatcher — /model", () => {
     const { sessionManager, dispatcher } = makeHarness();
 
     await dispatcher.dispatch({ name: "provider", provider: "codex" }, CTX);
-    await dispatcher.dispatch({ name: "model", model: "gpt-5.4-mini" }, CTX);
+    await dispatcher.dispatch({ name: "model", model: "gpt-5.5" }, CTX);
 
     expect(sessionManager.getEffectiveProvider(CTX.chatId)).toBe("codex");
+  });
+});
+
+describe("CommandDispatcher — /effort", () => {
+  it("sets effort override on idle Claude session and replies with effort", async () => {
+    const { feishu, sessionManager, dispatcher } = makeHarness();
+    const session = sessionManager.getOrCreate(CTX.chatId);
+
+    await dispatcher.dispatch({ name: "effort", effort: "max" }, CTX);
+
+    expect(feishu.replyText).toHaveBeenCalledOnce();
+    const text: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls[0]![1];
+    expect(text).toContain("max");
+    expect(session.getStatus().effort).toBe("max");
+  });
+
+  it("sets effort override on idle Codex session and rejects Claude-only max", async () => {
+    const { feishu, sessionManager, dispatcher } = makeHarness();
+
+    await dispatcher.dispatch({ name: "provider", provider: "codex" }, CTX);
+    await dispatcher.dispatch({ name: "effort", effort: "minimal" }, CTX);
+
+    const session = sessionManager.getOrCreate(CTX.chatId);
+    expect(session.getStatus().effort).toBe("minimal");
+
+    await dispatcher.dispatch({ name: "effort", effort: "max" }, CTX);
+    expect(session.getStatus().effort).toBe("minimal");
+    const lastReply: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls.at(-1)![1];
+    expect(lastReply).toContain("minimal");
+    expect(lastReply).toContain("xhigh");
+  });
+
+  it("rejects effort changes when session is not idle", async () => {
+    const { feishu, sessionManager, dispatcher } = makeBlockingHarness();
+    const session = sessionManager.getOrCreate(CTX.chatId);
+    session.submit(
+      { kind: "run", text: "hello", senderOpenId: "ou_alice", parentMessageId: "om_p0", locale: "zh" },
+      async () => {},
+    );
+    await flushMicrotasks();
+
+    await dispatcher.dispatch({ name: "effort", effort: "low" }, CTX);
+
+    expect(feishu.replyText).toHaveBeenCalledOnce();
+    const text: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls[0]![1];
+    expect(text).toContain("执行中");
+    expect(session.getStatus().effort).toBe("high");
   });
 });
 
@@ -456,7 +506,7 @@ describe("CommandDispatcher — /provider", () => {
 
     const after = sessionManager.getOrCreate(CTX.chatId);
     expect(after).not.toBe(before);
-    expect(after.getStatus().model).toBe("gpt-5.4");
+    expect(after.getStatus().model).toBe("gpt-5.5");
   });
 
   it("rejects when session is not idle", async () => {
@@ -889,7 +939,7 @@ describe("CommandDispatcher — /resume", () => {
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
       permissionMode: "default",
-      model: "gpt-5.4",
+      model: "gpt-5.5",
     });
 
     await dispatcher.dispatch({ name: "resume", target: "oc_resume_codex" }, CTX);

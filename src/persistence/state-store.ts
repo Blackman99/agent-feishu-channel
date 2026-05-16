@@ -9,6 +9,7 @@ export interface SessionRecord {
   lastActiveAt: string;
   permissionMode?: string;
   model?: string;
+  effort?: string;
 }
 
 type LegacySessionRecordInput = {
@@ -20,6 +21,7 @@ type LegacySessionRecordInput = {
   lastActiveAt: string;
   permissionMode?: string;
   model?: string;
+  effort?: string;
 };
 
 export interface State {
@@ -83,6 +85,7 @@ function normalizeSessionRecord(record: unknown): SessionRecord {
       ? { permissionMode: session.permissionMode }
       : {}),
     ...(isString(session.model) ? { model: session.model } : {}),
+    ...(isString(session.effort) ? { effort: session.effort } : {}),
   };
 }
 

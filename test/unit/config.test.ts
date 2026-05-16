@@ -57,8 +57,11 @@ cli_path = "claude"
     expect(agent.permissionTimeoutMs).toBe(300_000);
     expect(agent.permissionWarnBeforeMs).toBe(60_000);
     expect(cfg.claude.defaultModel).toBe("claude-opus-4-6");
+    expect(cfg.claude.defaultEffort).toBe("high");
     expect(cfg.claude.cliPath).toBe("claude");
-    expect(codex.defaultModel).toBe("gpt-5.4");
+    expect(codex.defaultModel).toBe("gpt-5.5");
+    expect(codex.defaultEffort).toBe("high");
+    expect(codex.defaultPermissionMode).toBe("default");
     expect(codex.cliPath).toBe("codex");
   });
 
@@ -100,10 +103,13 @@ permission_warn_before_seconds = 30
 
 [claude]
 default_model = "claude-sonnet-4-6"
+default_effort = "max"
 cli_path = "/usr/local/bin/claude"
 
 [codex]
 default_model = "gpt-5.4-mini"
+default_effort = "minimal"
+default_permission_mode = "plan"
 cli_path = "/opt/homebrew/bin/codex"
 `);
     const cfg = await loadConfig(path);
@@ -115,9 +121,33 @@ cli_path = "/opt/homebrew/bin/codex"
     expect(agent.permissionTimeoutMs).toBe(120_000);
     expect(agent.permissionWarnBeforeMs).toBe(30_000);
     expect(cfg.claude.defaultModel).toBe("claude-sonnet-4-6");
+    expect(cfg.claude.defaultEffort).toBe("max");
     expect(cfg.claude.cliPath).toBe("/usr/local/bin/claude");
     expect(codex.defaultModel).toBe("gpt-5.4-mini");
+    expect(codex.defaultEffort).toBe("minimal");
+    expect(codex.defaultPermissionMode).toBe("plan");
     expect(codex.cliPath).toBe("/opt/homebrew/bin/codex");
+  });
+
+  it("allows provider-specific permission modes to differ from the shared fallback", async () => {
+    const path = writeConfig(`
+${MINIMAL_CONFIG}
+
+[agent]
+default_cwd = "/tmp/cfc-test"
+default_permission_mode = "default"
+
+[claude]
+default_model = "claude-sonnet-4-6"
+default_permission_mode = "acceptEdits"
+
+[codex]
+default_permission_mode = "plan"
+`);
+    const cfg = await loadConfig(path);
+    expect(cfg.agent.defaultPermissionMode).toBe("default");
+    expect(cfg.claude.defaultPermissionMode).toBe("acceptEdits");
+    expect(cfg.codex.defaultPermissionMode).toBe("plan");
   });
 
   it("rejects conflicting legacy Claude-era fields when [agent] is present", async () => {
@@ -162,8 +192,60 @@ cli_path = "/usr/local/bin/claude"
     expect(agent.permissionWarnBeforeMs).toBe(45_000);
     expect(cfg.claude.defaultModel).toBe("claude-sonnet-4-6");
     expect(cfg.claude.cliPath).toBe("/usr/local/bin/claude");
-    expect(codex.defaultModel).toBe("gpt-5.4");
+    expect(codex.defaultModel).toBe("gpt-5.5");
     expect(codex.cliPath).toBe("codex");
+  });
+
+  it("loads partial [agent] settings written into a legacy Claude config", async () => {
+    const path = writeConfig(`
+${MINIMAL_CONFIG}
+
+[agent]
+default_provider = "codex"
+
+[claude]
+default_cwd = "/tmp/legacy"
+default_permission_mode = "bypassPermissions"
+permission_timeout_seconds = 180
+permission_warn_before_seconds = 45
+default_model = "claude-opus-4-7"
+cli_path = "claude"
+`);
+    const cfg = await loadConfig(path);
+    expect(cfg.agent.defaultProvider).toBe("codex");
+    expect(cfg.agent.defaultCwd).toBe("/tmp/legacy");
+    expect(cfg.agent.defaultPermissionMode).toBe("bypassPermissions");
+    expect(cfg.agent.permissionTimeoutMs).toBe(180_000);
+    expect(cfg.agent.permissionWarnBeforeMs).toBe(45_000);
+    expect(cfg.claude.defaultCwd).toBe("/tmp/legacy");
+    expect(cfg.claude.defaultPermissionMode).toBe("bypassPermissions");
+    expect(cfg.codex.defaultModel).toBe("gpt-5.5");
+    expect(cfg.codex.defaultPermissionMode).toBe("bypassPermissions");
+  });
+
+  it("lets provider-specific settings override partial shared fallbacks", async () => {
+    const path = writeConfig(`
+${MINIMAL_CONFIG}
+
+[agent]
+default_cwd = "/tmp/shared"
+default_permission_mode = "default"
+
+[claude]
+default_model = "claude-opus-4-7"
+default_permission_mode = "acceptEdits"
+
+[codex]
+default_model = "gpt-5.5"
+default_permission_mode = "plan"
+default_effort = "minimal"
+`);
+    const cfg = await loadConfig(path);
+    expect(cfg.agent.defaultCwd).toBe("/tmp/shared");
+    expect(cfg.agent.defaultPermissionMode).toBe("default");
+    expect(cfg.claude.defaultPermissionMode).toBe("acceptEdits");
+    expect(cfg.codex.defaultPermissionMode).toBe("plan");
+    expect(cfg.codex.defaultEffort).toBe("minimal");
   });
 
   it("throws ConfigError on missing file", async () => {

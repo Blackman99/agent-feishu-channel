@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Logger } from "pino";
 import type {
   Codex as CodexCtor,
+  ModelReasoningEffort,
   ThreadEvent,
   ThreadItem,
   ThreadOptions,
@@ -142,6 +143,7 @@ function buildThreadOptions(
 ): ThreadOptions {
   return {
     model: params.options.model,
+    modelReasoningEffort: params.options.effort as ModelReasoningEffort,
     workingDirectory: params.options.cwd,
     skipGitRepoCheck: true,
     ...mapPermissionMode(params.options.permissionMode),

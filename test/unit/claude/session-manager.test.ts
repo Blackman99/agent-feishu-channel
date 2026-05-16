@@ -21,7 +21,8 @@ const BASE_CLAUDE_CONFIG = {
   defaultPermissionMode: "default" as const,
   defaultProvider: "claude" as const,
   defaultModel: "claude-opus-4-6",
-  codexDefaultModel: "gpt-5.4",
+  codexDefaultModel: "gpt-5.5",
+  defaultEffort: "high" as const,
   cliPath: "claude",
   permissionTimeoutMs: 300_000,
   permissionWarnBeforeMs: 60_000,
@@ -170,7 +171,7 @@ describe("ClaudeSessionManager", () => {
     expect(mgr.getEffectiveProvider("oc_1")).toBe("claude");
   });
 
-  it("setProviderOverride changes the effective provider and seeds the provider default model", () => {
+  it("setProviderOverride changes the effective provider and seeds provider-specific defaults", () => {
     const mgr = new ClaudeSessionManager({
       config: BASE_CLAUDE_CONFIG,
       queryFn: NOOP_QUERY,
@@ -183,7 +184,10 @@ describe("ClaudeSessionManager", () => {
     mgr.setProviderOverride("oc_1", "codex");
 
     expect(mgr.getEffectiveProvider("oc_1")).toBe("codex");
-    expect(mgr.getOrCreate("oc_1").getStatus().model).toBe("gpt-5.4");
+    const status = mgr.getOrCreate("oc_1").getStatus();
+    expect(status.model).toBe("gpt-5.5");
+    expect(status.effort).toBe("high");
+    expect(status.permissionMode).toBe("default");
   });
 
   it("isolates sessions by provider for the same chat and restores the original provider session when switched back", () => {
@@ -257,7 +261,9 @@ describe("ClaudeSessionManager", () => {
       providerConfigs: {
         claude: BASE_CLAUDE_CONFIG,
         codex: {
-          defaultModel: "gpt-5.4",
+          defaultModel: "gpt-5.5",
+          defaultEffort: "high",
+          defaultPermissionMode: "default",
           cliPath: "codex",
         },
       },
@@ -440,7 +446,7 @@ describe("ClaudeSessionManager — Persistence startup", () => {
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
       permissionMode: "default",
-      model: "gpt-5.4",
+      model: "gpt-5.5",
     };
 
     const mgr = new ClaudeSessionManager({
@@ -500,7 +506,7 @@ describe("ClaudeSessionManager — Persistence startup", () => {
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
       permissionMode: "bypassPermissions",
-      model: "gpt-5.4",
+      model: "gpt-5.5",
     };
 
     const mgr = new ClaudeSessionManager({
@@ -617,6 +623,7 @@ describe("ClaudeSessionManager — Save triggers", () => {
       lastActiveAt: expect.any(String),
       permissionMode: "plan",
       model: "gpt-5.4-mini",
+      effort: "high",
     });
   });
 

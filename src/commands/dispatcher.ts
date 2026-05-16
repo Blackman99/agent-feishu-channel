@@ -6,8 +6,14 @@ import type { Logger } from "pino";
 import type { ParsedCommand } from "./router.js";
 import type { ClaudeSessionManager } from "../claude/session-manager.js";
 import type { FeishuClient } from "../feishu/client.js";
-import type { AppConfig } from "../types.js";
-import type { AgentProvider } from "../types.js";
+import type {
+  AgentProvider,
+  AppConfig,
+  ClaudeEffortLevel,
+  CodexEffortLevel,
+  PermissionMode,
+  ReasoningEffort,
+} from "../types.js";
 import type { PermissionBroker } from "../claude/permission-broker.js";
 import type { QuestionBroker } from "../claude/question-broker.js";
 import type { Clock, TimeoutHandle } from "../util/clock.js";
@@ -33,6 +39,40 @@ const MODEL_CONTEXT_WINDOWS: Array<[prefix: string, tokens: number]> = [
   ["claude-sonnet-4", 200_000],
   ["claude-haiku-4", 200_000],
 ];
+
+const PERMISSION_MODE_VALUES = [
+  "default",
+  "acceptEdits",
+  "plan",
+  "bypassPermissions",
+] as const;
+const CLAUDE_EFFORT_VALUES = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+const CODEX_EFFORT_VALUES = [
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+] as const;
+
+function effortValuesForProvider(
+  provider: AgentProvider,
+): readonly ClaudeEffortLevel[] | readonly CodexEffortLevel[] {
+  return provider === "claude" ? CLAUDE_EFFORT_VALUES : CODEX_EFFORT_VALUES;
+}
+
+function isEffortSupported(
+  provider: AgentProvider,
+  effort: ReasoningEffort,
+): boolean {
+  return (effortValuesForProvider(provider) as readonly string[]).includes(effort);
+}
 
 function contextWindowFor(model: string): number {
   for (const [prefix, size] of MODEL_CONTEXT_WINDOWS) {
@@ -72,9 +112,13 @@ const SETTABLE_KEYS: Record<string, SettableKeyDef> = {
     type: "string",
   },
   "agent.default_permission_mode": {
-    paths: [["agent", "defaultPermissionMode"], ["claude", "defaultPermissionMode"]],
+    paths: [
+      ["agent", "defaultPermissionMode"],
+      ["claude", "defaultPermissionMode"],
+      ["codex", "defaultPermissionMode"],
+    ],
     type: "enum",
-    values: ["default", "acceptEdits", "plan", "bypassPermissions"],
+    values: PERMISSION_MODE_VALUES,
   },
   "agent.permission_timeout_seconds": {
     paths: [["agent", "permissionTimeoutMs"], ["claude", "permissionTimeoutMs"]],
@@ -87,26 +131,41 @@ const SETTABLE_KEYS: Record<string, SettableKeyDef> = {
     multiplier: 1000,
   },
   "claude.default_model": { path: ["claude", "defaultModel"], type: "string" },
+  "claude.default_effort": {
+    path: ["claude", "defaultEffort"],
+    type: "enum",
+    values: CLAUDE_EFFORT_VALUES,
+  },
   "claude.default_cwd": {
     paths: [["claude", "defaultCwd"], ["agent", "defaultCwd"]],
     type: "string",
   },
   "claude.default_permission_mode": {
-    paths: [["claude", "defaultPermissionMode"], ["agent", "defaultPermissionMode"]],
+    path: ["claude", "defaultPermissionMode"],
     type: "enum",
-    values: ["default", "acceptEdits", "plan", "bypassPermissions"],
+    values: PERMISSION_MODE_VALUES,
   },
   "claude.permission_timeout_seconds": {
-    paths: [["claude", "permissionTimeoutMs"], ["agent", "permissionTimeoutMs"]],
+    path: ["claude", "permissionTimeoutMs"],
     type: "number",
     multiplier: 1000,
   },
   "claude.permission_warn_before_seconds": {
-    paths: [["claude", "permissionWarnBeforeMs"], ["agent", "permissionWarnBeforeMs"]],
+    path: ["claude", "permissionWarnBeforeMs"],
     type: "number",
     multiplier: 1000,
   },
   "codex.default_model": { path: ["codex", "defaultModel"], type: "string" },
+  "codex.default_effort": {
+    path: ["codex", "defaultEffort"],
+    type: "enum",
+    values: CODEX_EFFORT_VALUES,
+  },
+  "codex.default_permission_mode": {
+    path: ["codex", "defaultPermissionMode"],
+    type: "enum",
+    values: PERMISSION_MODE_VALUES,
+  },
 };
 
 function parseConfigValue(
@@ -231,6 +290,8 @@ export class CommandDispatcher {
         return this.handleMode(cmd.mode, ctx);
       case "model":
         return this.handleModel(cmd.model, ctx);
+      case "effort":
+        return this.handleEffort(cmd.effort, ctx);
       case "cd":
         return this.handleCd(cmd.path, ctx);
       case "project":
@@ -288,6 +349,7 @@ export class CommandDispatcher {
       s.helpProvider,
       s.helpMode,
       s.helpModel,
+      s.helpEffort,
       "",
       s.helpSectionConfig,
       s.helpConfigShow,
@@ -315,6 +377,7 @@ export class CommandDispatcher {
       s.statusCwd(status.cwd),
       s.statusPermMode(status.permissionMode),
       s.statusModel(status.model),
+      s.statusEffort(status.effort),
       s.statusTurns(status.turnCount),
       s.statusInputTokens(status.totalInputTokens),
       s.statusOutputTokens(status.totalOutputTokens),
@@ -391,12 +454,15 @@ export class CommandDispatcher {
       `  defaultCwd: ${cfg.claude.defaultCwd}`,
       `  defaultPermissionMode: ${cfg.claude.defaultPermissionMode}`,
       `  defaultModel: ${cfg.claude.defaultModel}`,
+      `  defaultEffort: ${cfg.claude.defaultEffort}`,
       `  cliPath: ${cfg.claude.cliPath}`,
       `  permissionTimeoutMs: ${cfg.claude.permissionTimeoutMs}`,
       `  permissionWarnBeforeMs: ${cfg.claude.permissionWarnBeforeMs}`,
       "",
       "[codex]",
+      `  defaultPermissionMode: ${cfg.codex.defaultPermissionMode}`,
       `  defaultModel: ${cfg.codex.defaultModel}`,
+      `  defaultEffort: ${cfg.codex.defaultEffort}`,
       `  cliPath: ${cfg.codex.cliPath}`,
       "",
       "[render]",
@@ -587,6 +653,33 @@ export class CommandDispatcher {
     session.setModelOverride(model);
     this.sessionManager.persistNow();
     await this.feishu.replyText(ctx.parentMessageId, t(ctx.locale).modelSwitched(model));
+  }
+
+  private async handleEffort(
+    effort: ReasoningEffort,
+    ctx: CommandContext,
+  ): Promise<void> {
+    const provider = this.sessionManager.getEffectiveProvider(ctx.chatId);
+    if (!isEffortSupported(provider, effort)) {
+      await this.feishu.replyText(
+        ctx.parentMessageId,
+        t(ctx.locale).effortUnsupported(
+          provider,
+          effort,
+          effortValuesForProvider(provider).join(" | "),
+        ),
+      );
+      return;
+    }
+
+    const session = this.sessionManager.getOrCreate(ctx.chatId);
+    if (session.getState() !== "idle") {
+      await this.feishu.replyText(ctx.parentMessageId, t(ctx.locale).sessionBusy);
+      return;
+    }
+    session.setEffortOverride(effort);
+    this.sessionManager.persistNow();
+    await this.feishu.replyText(ctx.parentMessageId, t(ctx.locale).effortSwitched(effort));
   }
 
   private async handleCd(path: string, ctx: CommandContext): Promise<void> {

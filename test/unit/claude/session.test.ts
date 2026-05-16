@@ -14,6 +14,7 @@ const BASE_CLAUDE_CONFIG = {
   defaultCwd: "/tmp/cfc-test",
   defaultPermissionMode: "default" as const,
   defaultModel: "claude-opus-4-6",
+  defaultEffort: "high" as const,
   cliPath: "claude",
   permissionTimeoutMs: 300_000,
   permissionWarnBeforeMs: 60_000,

@@ -101,6 +101,7 @@ describe("createSdkQueryFn", () => {
       options: {
         cwd: "/tmp",
         model: "claude-opus-4-6",
+        effort: "max",
         permissionMode: "default",
         settingSources: ["project"],
       },
@@ -111,6 +112,7 @@ describe("createSdkQueryFn", () => {
     expect(s.prompt).toBe("hello");
     expect(s.options["cwd"]).toBe("/tmp");
     expect(s.options["model"]).toBe("claude-opus-4-6");
+    expect(s.options["effort"]).toBe("max");
     expect(s.options["permissionMode"]).toBe("default");
     expect(s.options["settingSources"]).toEqual(["project"]);
     expect(s.options["canUseTool"]).toBe(noopCanUseTool);
@@ -125,6 +127,7 @@ describe("createSdkQueryFn", () => {
       options: {
         cwd: "/tmp",
         model: "claude-opus-4-6",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
         resumeId: "ses_resume_bridge",
@@ -143,6 +146,7 @@ describe("createSdkQueryFn", () => {
       options: {
         cwd: "/tmp",
         model: "claude-opus-4-6",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },
@@ -168,6 +172,7 @@ describe("createSdkQueryFn", () => {
       options: {
         cwd: "/tmp",
         model: "claude-opus-4-6",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },
@@ -185,6 +190,7 @@ describe("createSdkQueryFn", () => {
       options: {
         cwd: "/tmp",
         model: "claude-opus-4-6",
+        effort: "high",
         permissionMode: "default",
         settingSources: ["project"],
       },

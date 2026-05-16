@@ -1,10 +1,11 @@
-import type { AgentProvider, PermissionMode } from "../types.js";
+import type { AgentProvider, PermissionMode, ReasoningEffort } from "../types.js";
 
 export const PROVIDER_IDS = ["claude", "codex"] as const;
 
 export interface ProviderRunOptions {
   cwd: string;
   model: string;
+  effort: ReasoningEffort;
   permissionMode: PermissionMode;
   resumeId?: string;
 }
