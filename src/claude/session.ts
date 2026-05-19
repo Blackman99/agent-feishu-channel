@@ -49,7 +49,12 @@ export interface SDKMessageLike {
   result?: string;
   errors?: readonly string[];
   duration_ms?: number;
-  usage?: { input_tokens?: number; output_tokens?: number };
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    context_input_tokens?: number;
+    context_window_tokens?: number;
+  };
   session_id?: string;
 }
 
@@ -115,6 +120,8 @@ export interface SessionStatus {
   turnCount: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  contextInputTokens?: number;
+  contextWindowTokens?: number;
   queueLength: number;
   providerSessionId?: string;
   createdAt: string;
@@ -257,6 +264,8 @@ export class ClaudeSession {
   private turnCount = 0;
   private totalInputTokens = 0;
   private totalOutputTokens = 0;
+  private currentContextInputTokens: number | undefined;
+  private contextWindowTokens: number | undefined;
   private claudeSessionId: string | undefined;
   private retainedContinuation: RetainedContinuationState = {
     tasks: [],
@@ -664,8 +673,11 @@ export class ClaudeSession {
 
   private estimatePromptBytes(prompt: string): number {
     const promptBytes = Buffer.byteLength(prompt, "utf8");
-    const historicalBytes = (this.totalInputTokens + this.totalOutputTokens) * 4;
-    return promptBytes + historicalBytes;
+    const contextTokensForBytes = this.provider === "codex"
+      ? (this.currentContextInputTokens ?? 0)
+      : (this.currentContextInputTokens
+        ?? (this.totalInputTokens + this.totalOutputTokens));
+    return promptBytes + contextTokensForBytes * 4;
   }
 
   private contextWindowFor(model: string): number {
@@ -673,14 +685,41 @@ export class ClaudeSession {
     return 200_000;
   }
 
-  private assessContextRisk(prompt: string): ContextAssessment {
-    const tokenUsage = this.totalInputTokens + this.totalOutputTokens;
-    const tokenWindow = this.contextWindowFor(
+  private contextTokenAssessment(): {
+    tokenUsage: number;
+    tokenWindow: number;
+    hasReliableTokenUsage: boolean;
+  } {
+    const tokenWindow = this.contextWindowTokens ?? this.contextWindowFor(
       this.currentModel(),
     );
+    if (this.provider === "codex") {
+      return {
+        tokenUsage: this.currentContextInputTokens ?? 0,
+        tokenWindow,
+        hasReliableTokenUsage:
+          this.currentContextInputTokens !== undefined &&
+          this.contextWindowTokens !== undefined,
+      };
+    }
+
+    return {
+      tokenUsage: this.currentContextInputTokens
+        ?? (this.totalInputTokens + this.totalOutputTokens),
+      tokenWindow,
+      hasReliableTokenUsage: true,
+    };
+  }
+
+  private assessContextRisk(prompt: string): ContextAssessment {
+    const { tokenUsage, tokenWindow, hasReliableTokenUsage } =
+      this.contextTokenAssessment();
     const estimatedBytes = this.estimatePromptBytes(prompt);
 
-    if (tokenUsage / tokenWindow >= 0.8 || estimatedBytes >= 12_000_000) {
+    const tokenUsageIsHigh =
+      hasReliableTokenUsage && tokenUsage / tokenWindow >= 0.8;
+
+    if (tokenUsageIsHigh || estimatedBytes >= 12_000_000) {
       return { level: "warn", tokenUsage, tokenWindow, estimatedBytes };
     }
     return { level: "normal", tokenUsage, tokenWindow, estimatedBytes };
@@ -917,6 +956,7 @@ export class ClaudeSession {
       `${this.currentProviderLabel()} turn complete`,
     );
     this.turnCount++;
+    this.recordCurrentContextUsage(resultMsg.usage);
     this.totalInputTokens += resultMsg.usage?.input_tokens ?? 0;
     this.totalOutputTokens += resultMsg.usage?.output_tokens ?? 0;
     this.recordRecentContext(`User: ${this.immediateRequestSummary(input)}`);
@@ -925,6 +965,31 @@ export class ClaudeSession {
     }
     this.lastActiveAt = new Date().toISOString();
     this.onTurnComplete?.();
+  }
+
+  private recordCurrentContextUsage(
+    usage: SDKMessageLike["usage"],
+  ): void {
+    if (!usage) return;
+    const contextInputTokens = this.positiveTokenCount(
+      usage.context_input_tokens ?? usage.input_tokens,
+    );
+    if (contextInputTokens !== undefined) {
+      this.currentContextInputTokens = contextInputTokens;
+    }
+
+    const contextWindowTokens = this.positiveTokenCount(
+      usage.context_window_tokens,
+    );
+    if (contextWindowTokens !== undefined) {
+      this.contextWindowTokens = contextWindowTokens;
+    }
+  }
+
+  private positiveTokenCount(value: unknown): number | undefined {
+    return typeof value === "number" && Number.isFinite(value) && value > 0
+      ? value
+      : undefined;
   }
 
   private async emitAssistantBlock(
@@ -1032,6 +1097,12 @@ export class ClaudeSession {
       turnCount: this.turnCount,
       totalInputTokens: this.totalInputTokens,
       totalOutputTokens: this.totalOutputTokens,
+      ...(this.currentContextInputTokens !== undefined
+        ? { contextInputTokens: this.currentContextInputTokens }
+        : {}),
+      ...(this.contextWindowTokens !== undefined
+        ? { contextWindowTokens: this.contextWindowTokens }
+        : {}),
       queueLength: this.inputQueue.length,
       ...(this.claudeSessionId !== undefined
         ? { providerSessionId: this.claudeSessionId }
@@ -1086,6 +1157,17 @@ export class ClaudeSession {
   /** @internal */
   _testRecordRecentContext(entry: string): void {
     this.recordRecentContext(entry);
+  }
+
+  /** @internal */
+  _testSetCurrentContextUsage(
+    inputTokens: number,
+    windowTokens?: number,
+  ): void {
+    this.currentContextInputTokens = inputTokens;
+    if (windowTokens !== undefined) {
+      this.contextWindowTokens = windowTokens;
+    }
   }
 
   /** @internal */

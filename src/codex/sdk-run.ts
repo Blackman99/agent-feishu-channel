@@ -83,7 +83,12 @@ function makeAssistantMessage(
 
 function makeResultMessage(
   sessionId: string | undefined,
-  usage?: { input_tokens: number; output_tokens: number },
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    context_input_tokens?: number;
+    context_window_tokens?: number;
+  },
 ): SDKMessageLike {
   return {
     type: "result",
@@ -94,10 +99,22 @@ function makeResultMessage(
         usage: {
           input_tokens: usage.input_tokens,
           output_tokens: usage.output_tokens,
+          ...(usage.context_input_tokens !== undefined
+            ? { context_input_tokens: usage.context_input_tokens }
+            : {}),
+          ...(usage.context_window_tokens !== undefined
+            ? { context_window_tokens: usage.context_window_tokens }
+            : {}),
         },
       }
       : {}),
   };
+}
+
+function positiveUsageNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
 }
 
 function deltaText(
@@ -356,10 +373,23 @@ export function createCodexQueryFn(
             }
 
             if (event.type === "turn.completed") {
-              yield makeResultMessage(threadId ?? thread.id ?? undefined, {
+              const usageRecord = event.usage as Record<string, unknown>;
+              const contextWindowTokens = positiveUsageNumber(
+                usageRecord["model_context_window"]
+                  ?? usageRecord["context_window_tokens"]
+                  ?? usageRecord["context_window"],
+              );
+              const usage = {
                 input_tokens: event.usage.input_tokens,
                 output_tokens: event.usage.output_tokens,
-              });
+                context_input_tokens: event.usage.input_tokens,
+                ...(contextWindowTokens !== undefined
+                  ? {
+                    context_window_tokens: contextWindowTokens,
+                  }
+                  : {}),
+              };
+              yield makeResultMessage(threadId ?? thread.id ?? undefined, usage);
               continue;
             }
 

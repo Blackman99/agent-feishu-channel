@@ -154,6 +154,61 @@ describe("createCodexQueryFn", () => {
         usage: {
           input_tokens: 12,
           output_tokens: 34,
+          context_input_tokens: 12,
+        },
+      },
+    ]);
+  });
+
+  it("carries Codex current context usage and model window through result messages", async () => {
+    const sdk = makeSdk(
+      [
+        { type: "thread.started", thread_id: "thread_abc" },
+        {
+          type: "turn.completed",
+          usage: {
+            input_tokens: 110_416,
+            cached_input_tokens: 0,
+            output_tokens: 1_200,
+            reasoning_output_tokens: 300,
+            model_context_window: 258_400,
+          },
+        },
+      ],
+      { threadId: null },
+    );
+    const fn = createCodexQueryFn({
+      cliPath: "codex",
+      logger: SILENT,
+      loadSdk: async () => sdk as unknown as typeof import("@openai/codex-sdk"),
+    });
+
+    const handle = fn({
+      prompt: "hello codex",
+      options: {
+        cwd: "/tmp/project",
+        model: "gpt-5.5",
+        effort: "high",
+        permissionMode: "default",
+        settingSources: ["project"],
+        resumeId: "thread_abc",
+      },
+      canUseTool: noopCanUseTool,
+    });
+
+    const got: unknown[] = [];
+    for await (const msg of handle.messages) got.push(msg);
+
+    expect(got).toEqual([
+      {
+        type: "result",
+        subtype: "success",
+        session_id: "thread_abc",
+        usage: {
+          input_tokens: 110_416,
+          output_tokens: 1_200,
+          context_input_tokens: 110_416,
+          context_window_tokens: 258_400,
         },
       },
     ]);

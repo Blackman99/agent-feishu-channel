@@ -140,6 +140,66 @@ describe("ClaudeSession context assessment", () => {
     });
   });
 
+  it("uses current Codex context usage instead of cumulative token totals", async () => {
+    const h = createHarness({
+      model: "gpt-5.5",
+      totalInputTokens: 1_885_279,
+      totalOutputTokens: 25_000,
+    });
+    h.session.setProvider("codex");
+    h.session._testSetCurrentContextUsage(110_416, 258_400);
+
+    expect(h.session._testAssessContextRisk("small prompt")).toMatchObject({
+      level: "normal",
+      tokenUsage: 110_416,
+      tokenWindow: 258_400,
+    });
+  });
+
+  it("does not emit a Codex context warning from cumulative usage alone", async () => {
+    const h = createHarness({
+      model: "gpt-5.5",
+      providerSessionId: "thread_codex_long",
+      totalInputTokens: 1_885_279,
+      totalOutputTokens: 25_000,
+    });
+    h.session.setProvider("codex");
+    h.session._testSetCurrentContextUsage(110_416, 258_400);
+
+    const outcome = await h.session.submit(runInput("continue codex work"), h.emit);
+    if (outcome.kind !== "started") throw new Error("unreachable");
+    await flushMicrotasks();
+
+    expect(h.timeline[0]).toBe("queryFn");
+    expect(h.events).not.toContainEqual({
+      type: "context_warning",
+      level: "warn",
+    });
+
+    h.fakes[0]!.finishWithSuccess({
+      durationMs: 1,
+      inputTokens: 110_500,
+      outputTokens: 1_000,
+    });
+    await outcome.done;
+  });
+
+  it("does not use the fallback token window for Codex warnings", async () => {
+    const h = createHarness({
+      model: "gpt-5.5",
+      totalInputTokens: 1_885_279,
+      totalOutputTokens: 25_000,
+    });
+    h.session.setProvider("codex");
+    h.session._testSetCurrentContextUsage(165_000);
+
+    expect(h.session._testAssessContextRisk("small prompt")).toMatchObject({
+      level: "normal",
+      tokenUsage: 165_000,
+      tokenWindow: 200_000,
+    });
+  });
+
   it("uses the same 200k context window for other supported Claude families", async () => {
     const h = createHarness({
       model: "claude-haiku-4-0",

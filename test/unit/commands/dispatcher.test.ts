@@ -313,6 +313,36 @@ describe("CommandDispatcher — simple commands", () => {
       expect(text).toContain("系统处理顺序：预警 -> 最后兜底重置");
       expect(text).not.toContain("压缩");
     });
+
+    it("shows Codex current context usage instead of cumulative token totals", async () => {
+      const { feishu, dispatcher, sessionManager } = makeHarness();
+      sessionManager.setProviderOverride(CTX.chatId, "codex");
+      const session = sessionManager.getOrCreate(CTX.chatId) as any;
+      session.totalInputTokens = 1_885_279;
+      session.totalOutputTokens = 25_000;
+      session._testSetCurrentContextUsage(110_416, 258_400);
+
+      await dispatcher.dispatch({ name: "context" }, CTX);
+
+      const text: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls[0]![1];
+      expect(text).toContain("110,416");
+      expect(text).toContain("258,400");
+      expect(text).not.toContain("1,885,279");
+      expect(text).not.toContain("预警");
+    });
+
+    it("does not warn for Codex context usage without a provider window", async () => {
+      const { feishu, dispatcher, sessionManager } = makeHarness();
+      sessionManager.setProviderOverride(CTX.chatId, "codex");
+      const session = sessionManager.getOrCreate(CTX.chatId);
+      session._testSetCurrentContextUsage(165_000);
+
+      await dispatcher.dispatch({ name: "context" }, CTX);
+
+      const text: string = (feishu.replyText as ReturnType<typeof vi.fn>).mock.calls[0]![1];
+      expect(text).toContain("165,000");
+      expect(text).not.toContain("预警");
+    });
   });
 
   describe("/config show", () => {

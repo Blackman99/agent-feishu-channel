@@ -410,8 +410,14 @@ export class CommandDispatcher {
     const session = this.sessionManager.getOrCreate(ctx.chatId);
     const status = session.getStatus();
     const s = t(ctx.locale);
-    const windowSize = contextWindowFor(status.model);
-    const used = status.totalInputTokens;
+    const windowSize = status.contextWindowTokens ?? contextWindowFor(status.model);
+    const used = status.contextInputTokens
+      ?? (status.provider === "codex" ? 0 : status.totalInputTokens);
+    const hasReliableContextUsage =
+      status.provider === "codex"
+        ? status.contextInputTokens !== undefined &&
+          status.contextWindowTokens !== undefined
+        : true;
     const pct = ((used / windowSize) * 100).toFixed(1);
     const lines = [
       s.contextHeader,
@@ -420,7 +426,7 @@ export class CommandDispatcher {
       s.contextWindow(windowSize),
       s.contextPercent(pct),
     ];
-    if (used / windowSize > 0.8) {
+    if (hasReliableContextUsage && used / windowSize > 0.8) {
       lines.push("", s.contextWarning, s.contextStages);
     }
     await this.feishu.replyText(ctx.parentMessageId, lines.join("\n"));
