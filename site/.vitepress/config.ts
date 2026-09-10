@@ -6,6 +6,16 @@ export default defineConfig({
   base: '/agent-feishu-channel/',
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/agent-feishu-channel/favicon.svg' }],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:title', content: 'Agent Feishu Channel' }],
+    ['meta', { property: 'og:description', content: 'Bridge Claude Code or Codex to Feishu group chat' }],
+    ['meta', { property: 'og:image', content: 'https://blackman99.github.io/agent-feishu-channel/og-en.png' }],
+    ['meta', { property: 'og:image:width', content: '1200' }],
+    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+    ['meta', { name: 'twitter:title', content: 'Agent Feishu Channel' }],
+    ['meta', { name: 'twitter:description', content: 'Bridge Claude Code or Codex to Feishu group chat' }],
+    ['meta', { name: 'twitter:image', content: 'https://blackman99.github.io/agent-feishu-channel/og-en.png' }],
   ],
 
   themeConfig: {
