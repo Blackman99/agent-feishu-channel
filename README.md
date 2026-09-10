@@ -17,6 +17,8 @@
   <img src="https://img.shields.io/node/v/agent-feishu-channel" alt="node version" />
 </p>
 
+**English** | [中文](README.zh.md)
+
 > **Migrating from `claude-feishu-channel`?** The project was renamed to reflect multi-provider support (Claude + Codex). Run `pnpm remove claude-feishu-channel && pnpm add agent-feishu-channel` (or the npm equivalent). Command is now `afc` instead of `cfc`. On first run, the state directory at `~/.claude-feishu-channel/` will be auto-renamed to `~/.agent-feishu-channel/` — session history is preserved. Config keys are unchanged.
 
 ## Features
