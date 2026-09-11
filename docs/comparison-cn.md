@@ -15,7 +15,7 @@
 | **[agent-feishu-channel](https://github.com/Blackman99/agent-feishu-channel)** | 飞书 / Lark 群里跑 Claude + Codex：WebSocket 服务、权限审批卡、会话持久化、config 挂 MCP；CLI `afc`。 |
 | **[lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)**（npm `lark-channel-bridge`） | 飞书 ↔ 本机 Claude Code / Codex 的轻量桥；扫码绑定 PersonalAgent，流式卡片、多工作区等；社区热度高（约 **2.3k–2.5k★** 量级，以 GitHub 为准）。 |
 | **[botmux](https://github.com/deepcoldy/botmux)** | 会话编排 daemon：为会话 spawn CLI 进程，飞书卡片 + 可交互 Web 终端；**20+** CLI/Agent 适配，不重造 agent 能力。 |
-| **[cc-connect](https://github.com/chenhg5/cc-connect)** | 本地 coding 助手 ↔ **多 IM**（飞书、钉钉、Telegram、Slack、企微、个人微信 ilink 等）的连接器；飞书有 QR / setup CLI。 |
+| **[cc-connect](https://github.com/chenhg5/cc-connect)** | 本地 coding 助手 ↔ **多 IM**（飞书、钉钉、Telegram、Slack、企微、个人微信 ilink 等）的连接器；飞书有 QR / setup CLI。社区热度约 **~1.5万★ / ~15k★ 量级**（开源对标 ≈15450；**发帖前再核**，勿捏造精确实时星数）。 |
 
 ---
 
@@ -53,9 +53,9 @@
 - **我们的切口：** 不做「投影终端的编排器」，做 **SDK 路径上的飞书权限经纪 + 双 provider 会话服务**。  
 - **一句话：** botmux = 站在 CLI 肩膀上编排；AFC = 飞书里把审批与 MCP 接进可控服务。
 
-### vs cc-connect
+### vs cc-connect（~1.5万★ / ~15k★ 量级；发帖前再核）
 
-- **先认输的地方：** 多 IM 一张网，飞书只是入口之一；企业要钉钉/企微/TG 同栈时对方更合适。  
+- **先认输的地方：** 多 IM 一张网，飞书只是入口之一；企业要钉钉/企微/TG 同栈时对方更合适。社区量级远大于本仓。  
 - **我们的切口：** **飞书专深**（卡片审批、会话、MCP），不扩平台矩阵。  
 - **一句话：** 要跨平台选 cc-connect；要飞书里把 coding agent 权限卡做好选 AFC。
 

@@ -23,6 +23,7 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Comparison', link: '/guide/comparison' },
       { text: 'npm', link: 'https://www.npmjs.com/package/agent-feishu-channel' },
       { text: 'GitHub', link: 'https://github.com/Blackman99/agent-feishu-channel' },
     ],
@@ -35,6 +36,7 @@ export default defineConfig({
           { text: 'Commands', link: '/guide/commands' },
           { text: 'Configuration', link: '/guide/configuration' },
           { text: 'Architecture', link: '/guide/architecture' },
+          { text: 'Comparison', link: '/guide/comparison' },
         ],
       },
     ],
