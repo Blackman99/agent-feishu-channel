@@ -32,6 +32,19 @@
 - **Staged context mitigation** — warn, then hard 50MB fallback
 - **Runtime config** — `/config set` to tune behavior without restart
 
+## Why this vs peers
+
+Differentiate as **Feishu-specialized + permission approval cards + MCP** — not by slash-command count, and not as a cross-IM connector.
+
+| You want… | Better fit |
+|-----------|------------|
+| Fastest QR onboarding, PersonalAgent, broad Feishu feature surface | [lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge) (~2.3k–2.5k★ magnitude) |
+| 20+ CLIs, tmux / Web terminal, multi-bot orchestration | [botmux](https://github.com/deepcoldy/botmux) |
+| Multi-IM (Feishu / DingTalk / Telegram / WeCom…) on one bridge | [cc-connect](https://github.com/chenhg5/cc-connect) (~15k★ magnitude — re-check before posting) |
+| **Light dual-provider service in Feishu + approval cards + MCP in config** | **This project (agent-feishu-channel)** |
+
+Honest full tables → [docs/comparison.md](docs/comparison.md) (EN) · [docs/comparison-cn.md](docs/comparison-cn.md) (ZH) · site [Comparison](https://blackman99.github.io/agent-feishu-channel/guide/comparison).
+
 ## Quick Start
 
 ### Install

@@ -46,7 +46,7 @@
 |---------|--------------|
 | 扫码极速上手、PersonalAgent、功能面很大 | [lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)（社区热度高） |
 | 20+ CLI、tmux / Web 终端、多 bot 编排 | [botmux](https://github.com/deepcoldy/botmux) |
-| 多 IM（飞书 / 钉钉 / Telegram / 企微…）统一桥 | [cc-connect](https://github.com/chenhg5/cc-connect) |
+| 多 IM（飞书 / 钉钉 / Telegram / 企微…）统一桥 | [cc-connect](https://github.com/chenhg5/cc-connect)（~15k★ 量级，发帖前再核） |
 | **飞书群里轻量双 provider + 权限卡 + MCP，服务先稳** | **本项目（agent-feishu-channel）** |
 
 诚实对照见 [docs/comparison-cn.md](docs/comparison-cn.md) 或下方「选型对照」摘要。
@@ -257,4 +257,4 @@ MIT
 
 - **先演示 Setup + 审批卡 + 重启续聊**，不要先甩完整命令表。  
 - 飞书生态群强调：开放平台 Bot + WebSocket + 交互卡片，而不是「又一个 slash 菜单」。  
-- 对比大仓（如 ~2.5k★ 的 bridge）时：**承认对方上手快 / 功能面大**，再讲本仓库「轻 + 权限卡 + MCP」——不贬低、不虚报星数。  
+- 对比大仓（如 ~2.5k★ 的 bridge、~15k★ 量级的 cc-connect）时：**承认对方上手快 / 功能面大 / 跨平台**，再讲本仓库「轻 + 权限卡 + MCP」——不贬低、不虚报星数（发帖前再核）。  
