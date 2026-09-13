@@ -18,7 +18,7 @@ Repo: https://github.com/Blackman99/agent-feishu-channel
 | Project | One-liner |
 |---------|-----------|
 | **[agent-feishu-channel](https://github.com/Blackman99/agent-feishu-channel)** | Claude + Codex in Feishu / Lark groups: WebSocket service, permission approval cards, session persistence, MCP via config; CLI `afc`. |
-| **[lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)** (npm `lark-channel-bridge`) | Lightweight Feishu ↔ local Claude Code / Codex bridge; QR PersonalAgent bind, streaming cards, multi-workspace; high community heat (**~2.3k–2.5k★** magnitude — verify on GitHub). |
+| **[lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)** (npm `lark-channel-bridge`) | Lightweight Feishu ↔ local Claude Code / Codex bridge; QR PersonalAgent bind, streaming cards, multi-workspace; high community heat (**~2484★** magnitude — verify on GitHub; npm weekly ~1240 — re-check before posting). |
 | **[botmux](https://github.com/deepcoldy/botmux)** | Session orchestration daemon: spawns CLI processes per session, Feishu cards + interactive Web terminal; **20+** CLI/agent adapters — does not reinvent agent cores. |
 | **[cc-connect](https://github.com/chenhg5/cc-connect)** | Local coding assistant ↔ **multi-IM** connector (Feishu, DingTalk, Telegram, Slack, WeCom, personal WeChat ilink, …); Feishu has QR / setup CLI. Community heat **~15k★ magnitude** (≈15450 from 开源对标 — **re-check before posting**; do not invent an exact live count). |
 
@@ -46,7 +46,7 @@ Repo: https://github.com/Blackman99/agent-feishu-channel
 
 ## How to talk about differences (for posts)
 
-### vs lark-channel-bridge (~2.3k–2.5k★ magnitude)
+### vs lark-channel-bridge (~2484★)
 
 - **Concede first:** larger community, faster QR onboarding, denser features and issue discussion.  
 - **Our cut:** not “more commands” — a **lighter Feishu long-running service** + **permission approval cards as first-class** + **MCP written into config**.  
@@ -82,3 +82,5 @@ Repo: https://github.com/Blackman99/agent-feishu-channel
 
 Site: https://blackman99.github.io/agent-feishu-channel/  
 Repo: https://github.com/Blackman99/agent-feishu-channel
+
+> **Update 2026-09-13:** lark-channel-bridge ~2484★ / npm weekly ~1240 — QR onboarding lead; we keep permission gate / ZH / release hygiene.
