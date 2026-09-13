@@ -14,7 +14,7 @@ Repo: https://github.com/Blackman99/agent-feishu-channel
 | Project | One-liner |
 |---------|-----------|
 | **[agent-feishu-channel](https://github.com/Blackman99/agent-feishu-channel)** | Claude + Codex in Feishu / Lark: WebSocket service, permission approval cards, session persistence, MCP in config; CLI `afc`. |
-| **[lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)** | Feishu ↔ local Claude/Codex bridge; QR PersonalAgent; **~2.3k–2.5k★** magnitude. |
+| **[lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)** | Feishu ↔ local Claude/Codex bridge; QR PersonalAgent; **~2484★** magnitude (npm weekly ~1240 — re-check before posting). |
 | **[botmux](https://github.com/deepcoldy/botmux)** | Session orchestration daemon; Feishu cards + Web terminal; **20+** CLI adapters. |
 | **[cc-connect](https://github.com/chenhg5/cc-connect)** | Local coding assistant ↔ **multi-IM** (Feishu, DingTalk, Telegram, Slack, WeCom, …). **~15k★ magnitude** (≈15450 from 开源对标 — **re-check before posting**). |
 
@@ -35,7 +35,7 @@ Repo: https://github.com/Blackman99/agent-feishu-channel
 
 ## How to talk differences
 
-- **vs bridge (~2.5k★):** concede community & QR speed; our cut = lighter service + first-class approval cards + MCP in config. Never “destroys bridge.”
+- **vs bridge (~2484★):** concede community & QR speed; our cut = lighter service + first-class approval cards + MCP in config. Never “destroys bridge.”
 - **vs botmux:** concede adapters & Web terminal; our cut = Feishu permission broker + dual-provider session service, not a terminal orchestrator.
 - **vs cc-connect (~15k★):** concede multi-IM mesh; our cut = **Feishu-specialized** — do not expand platform matrix.
 
@@ -52,3 +52,5 @@ Repo: https://github.com/Blackman99/agent-feishu-channel
 > If your pain is **Feishu-only, keep the service light, require in-group approve for sensitive tools, and want MCP in config** — try **agent-feishu-channel** (`npm i -g agent-feishu-channel` → `afc init` → `afc`).
 
 Full tables and post phrasing: keep [docs/comparison.md](https://github.com/Blackman99/agent-feishu-channel/blob/main/docs/comparison.md) and [docs/comparison-cn.md](https://github.com/Blackman99/agent-feishu-channel/blob/main/docs/comparison-cn.md) in sync with this page’s framing.
+
+> **Update 2026-09-13:** lark-channel-bridge ~2484★ / npm weekly ~1240 — QR onboarding lead; we keep permission gate / ZH / release hygiene.
