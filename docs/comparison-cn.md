@@ -13,7 +13,7 @@
 | 项目 | 一句话 |
 |------|--------|
 | **[agent-feishu-channel](https://github.com/Blackman99/agent-feishu-channel)** | 飞书 / Lark 群里跑 Claude + Codex：WebSocket 服务、权限审批卡、会话持久化、config 挂 MCP；CLI `afc`。 |
-| **[lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)**（npm `lark-channel-bridge`） | 飞书 ↔ 本机 Claude Code / Codex 的轻量桥；扫码绑定 PersonalAgent，流式卡片、多工作区等；社区热度高（约 **2.3k–2.5k★** 量级，以 GitHub 为准）。 |
+| **[lark-channel-bridge](https://github.com/zarazhangrui/lark-coding-agent-bridge)**（npm `lark-channel-bridge`） | 飞书 ↔ 本机 Claude Code / Codex 的轻量桥；扫码绑定 PersonalAgent，流式卡片、多工作区等；社区热度高（约 **~2484★** 量级 / npm 周下~1240，以 GitHub/npm 为准，发帖前再核）。 |
 | **[botmux](https://github.com/deepcoldy/botmux)** | 会话编排 daemon：为会话 spawn CLI 进程，飞书卡片 + 可交互 Web 终端；**20+** CLI/Agent 适配，不重造 agent 能力。 |
 | **[cc-connect](https://github.com/chenhg5/cc-connect)** | 本地 coding 助手 ↔ **多 IM**（飞书、钉钉、Telegram、Slack、企微、个人微信 ilink 等）的连接器；飞书有 QR / setup CLI。社区热度约 **~1.5万★ / ~15k★ 量级**（开源对标 ≈15450；**发帖前再核**，勿捏造精确实时星数）。 |
 
@@ -41,7 +41,7 @@
 
 ## 怎么讲差异（给发帖用）
 
-### vs lark-channel-bridge（~2.5k★）
+### vs lark-channel-bridge（~2484★）
 
 - **先认输的地方：** 对方社区更大、扫码上手更快、功能面与 issue 讨论更密。  
 - **我们的切口：** 不是「命令更多」，而是 **更轻的飞书常驻服务** + **权限审批卡作为一等公民** + **MCP 写进 config**。  
@@ -76,4 +76,6 @@
 > 若你的痛点是：**只要飞书、服务要轻、敏感操作必须在群里点批准、还想把 MCP 写进配置** —— 可以试 **agent-feishu-channel**（`npm i -g agent-feishu-channel` → `afc init` → `afc`）。
 
 站点：https://blackman99.github.io/agent-feishu-channel/  
-仓库：https://github.com/Blackman99/agent-feishu-channel  
+仓库：https://github.com/Blackman99/agent-feishu-channel
+
+> **更新 2026-09-13：** lark-channel-bridge ~2484★ / npm 周下~1240 — 上手（QR）领先；本项目继续打权限闸/中文/发布卫生，勿对打命令数。
